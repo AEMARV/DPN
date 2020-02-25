@@ -250,8 +250,8 @@ class Epocher(object):
 				break
 
 			# break
-			inputs = self.logical_index(inputs, to_be_summed ^ 1)
-			labels = self.logical_index(labels, to_be_summed ^ 1)
+			inputs = self.logical_index(inputs, ~to_be_summed)
+			labels = self.logical_index(labels, ~to_be_summed)
 
 		avg_iter = avg_iter/batchsz
 		stats= dict(avg_iterations=avg_iter)
@@ -362,7 +362,7 @@ class Epocher(object):
 				output_conc= (output.detach()*alpha).log_softmax(dim=1)
 				loss_conc = self.opts.optimizeropts.loss(output_conc, labels).mean()
 
-			if batch_n % 4== 0:
+			if batch_n % 4== 1:
 				self.model.print(fix_batch, epoch, batch_n)
 			thisNorm = self.block_grad(list(self.model.parameters()))
 			self.optimizer.step()

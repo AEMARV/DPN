@@ -1,5 +1,5 @@
 import numpy as np
-import tensorboardX
+from torch.utils.tensorboard import SummaryWriter
 import os
 from typing import List,Dict,Tuple
 np.random.seed(sum(map(ord, "aesthetics")))
@@ -46,14 +46,14 @@ class ResultStruct(object):
 				self.resultdict[key] = [resdict[key]]
 			if write:
 				if self.writer is None:
-					self.writer = tensorboardX.SummaryWriter(self.path_str)
+					self.writer = SummaryWriter(self.path_str)
 				self.writer.add_scalar(key,resdict[key],epoch)
 
 
 
 	@staticmethod
 	def write_res_dict(resdict:dict,path:str):
-		writer = tensorboardX.SummaryWriter(path)
+		writer = SummaryWriter(path)
 		for key in resdict.keys():
 			list_val = resdict[key]
 			for epoch,val in enumerate(list_val):

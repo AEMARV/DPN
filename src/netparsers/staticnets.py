@@ -3,7 +3,7 @@ import torch.tensor
 import math
 import torch.nn.functional as F
 import matplotlib as mpl
-mpl.use('TkAgg')
+# mpl.use('TkAgg')
 import matplotlib.pyplot as plt
 import networkx as nx
 

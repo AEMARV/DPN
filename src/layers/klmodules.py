@@ -695,18 +695,19 @@ class SMAP(MyModule):
 		self.isbiased = isbiased
 		self.stride=stride
 
-		self.weight = Parameter(torch.rand(out_state*out_id_comp,in_state,in_id_comp,rec_field,rec_field).log()*init_coef)
-		self.mixer = Parameter(torch.rand(out_state*out_id_comp,out_state*out_id_comp,1,1).log()*init_coef)
-		self.bias = Parameter(torch.zeros(out_state*out_id_comp))
-		self.sign = Parameter(torch.ones(1,1,1,1,out_id_comp))
+		weight = torch.rand(out_state*out_id_comp,in_state,in_id_comp,rec_field,rec_field).exponential_()
+		weight = weight / weight.sum(dim=1,keepdim=True)
+		weight = (weight.log()*init_coef).detach()
+		self.weight = Parameter(weight,requires_grad=True)
+		# self.mixer = Parameter(torch.rand(out_state*out_id_comp,out_state*out_id_comp,1,1).log()*init_coef)
+		self.bias = Parameter(torch.zeros(out_state*out_id_comp),requires_grad=True)
+		self.sign = Parameter(torch.ones(1,1,1,1,out_id_comp),requires_grad=True)
 
-		self.weight.requires_grad = True
-		self.weight.requires_grad = True
-		self.mixer.requires_grad = True
+		# self.mixer.requires_grad = True
 
 		self.register_parameter('weight',self.weight)
 		self.register_parameter('bias', self.bias)
-		self.register_parameter('mixer', self.mixer)
+		# self.register_parameter('mixer', self.mixer)
 	def print_output(self, y,epoch,batch):
 		y = y.exp()
 		probkernel = y
@@ -732,8 +733,8 @@ class SMAP(MyModule):
 		return
 	def forward(self, input):
 		kernel = self.weight.log_softmax(dim=1)
-		mixer = self.mixer
-		mixer = mixer.log_softmax(dim=1)#.log_softmax(dim=1)
+		# mixer = self.mixer
+		# mixer = mixer.log_softmax(dim=1)#.log_softmax(dim=1)
 		# kernel = alpha_lnorm(self.weight,1,10)
 		kernel = kernel.reshape(self.out_state*self.out_id_comp,self.in_state*self.in_id_comp,self.rec_field,self.rec_field)
 
@@ -743,22 +744,24 @@ class SMAP(MyModule):
 		input = input.permute([0,1,4,2,3])
 		input = input.reshape(input.shape[0],-1,input.shape[3],input.shape[4])
 		y = F.conv2d(input,kernel,padding=self.pad,stride=self.stride)
-		# y = y + bias
 
-		max_mixer = max_correction(mixer,1)
-		max_y = max_correction(y, 1)
-		mixer = mixer.unsqueeze(4)
-		mixer= mixer.transpose(0,4)
-		y = y.unsqueeze(4)
-		y = y + mixer
-		y =logsumexpstoch(y,1)
-		y = y.transpose(1,4)
+		# # y = y + bias
+		#
+		# max_mixer = max_correction(mixer,1)
+		# max_y = max_correction(y, 1)
+		# mixer = mixer.unsqueeze(4)
+		# mixer= mixer.transpose(0,4)
+		# y = y.unsqueeze(4)
+		# y = y + mixer
+		# y =logsumexpstoch(y,1)
+		# y = y.transpose(1,4)
 
 
 		y = y.reshape(y.shape[0],self.out_id_comp,self.out_state,y.shape[2],y.shape[3])
 		y = y.permute([0,2,3,4,1])
 
-
+		bias = self.bias.reshape(1, y.shape[1], 1,1,y.shape[4] )#.log_softmax(dim=1)
+		y  = y + bias
 
 
 
@@ -826,6 +829,7 @@ class ToFiniteProb(MyModule):
 	def forward(self, inputs):
 		inputs = inputs.unsqueeze(4).permute([0,4,2,3,1])*100
 		output = alpha_lnorm(torch.cat((inputs/2,-inputs/2),dim=1),1,1).exp()
+		output= (output>0.5).float()
 		return output
 
 class IDReg(MyModule):
@@ -849,7 +853,9 @@ class Sampler(MyModule):
 		self.conc.requires_grad= True
 
 	def sample(self, lp: Tensor, axis=1, manualrand=None):
-		norm = lp.logsumexp(dim=1,keepdim=True)
+		logprob = lp - (lp*1.2).logsumexp(dim=1,keepdim=True)/1.2
+		logprob = logprob.transpose(0,1)
+		norm = (lp).logsumexp(dim=1,keepdim=True)
 		lp = lp - (norm)
 		lp = lp.transpose(0,axis)
 		p = lp.exp()
@@ -864,7 +870,7 @@ class Sampler(MyModule):
 		samps[1:] = samps[1:] ^ samps[0:-1]
 		samps = samps.type_as(p).detach()
 		samps = samps.detach()
-		logprob = samps*lp
+		logprob = samps*logprob
 		logprob[logprob != logprob] = 0
 
 		logprob = logprob.sum(dim=0,keepdim=True)

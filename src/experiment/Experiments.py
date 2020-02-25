@@ -814,7 +814,7 @@ class VGG_PMAP_CIFAR10_Try(VGG_NOBN_CIFAR100):
 		                         numworkers=1,
 		                         gpu=True)
 		datasets = ['cifar10']
-		coef = .1
+		coef = 0
 		for dataset in datasets:
 			dataopt = DataOpts(dataset)
 			for model in [self.VGG_cifar10_vanilla]:
@@ -822,7 +822,7 @@ class VGG_PMAP_CIFAR10_Try(VGG_NOBN_CIFAR100):
 				''' Alpha Regularzation'''
 				for alpha in reversed([1]):
 					model_opt, optim_opt = model(dataopt, alpha_prior=alpha, weight_decay=0, init_coef=coef,
-					                             val_iterations=1, lr=0.1)
+					                             val_iterations=1, lr=.000001)
 					experiment_name = model.__name__ + "|l2_coef=0, alpha:{}".format(str(alpha))
 					opt = allOpts(experiment_name, netopts=model_opt, optimizeropts=optim_opt, epocheropts=epocheropt,
 					              dataopts=dataopt)
@@ -877,27 +877,27 @@ class VGG_PMAP_CIFAR10_Try(VGG_NOBN_CIFAR100):
 		nl = 'sample'
 		# model_string += 'conv|r:1,f:3,pad:same,stride:1,bias:1,{}'.format(convparam4) + d
 		model_string += 'tofin' + d# + nl + d
-		model_string += mapping(scale * 2 , r=3, bias=1, icnum=24, param='log', coef=init_coef, pad='same',stride=2) + d + nl + d
+		model_string += mapping(scale * 2 , r=3, bias=1, icnum=32, param='log', coef=init_coef, pad='same',stride=2) + d + nl + d
 		# model_string += 'klavgpool|r:2,pad:valid,stride:2,bias:1,{}'.format(convparam) + d+ nl + d
 
-		model_string += mapping(scale * 2, r=3, bias=1, icnum=24, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
-		# model_string += 'klavgpool|r:2,pad:valid,stride:2,bias:1,{}'.format(convparam) + d+ nl + d
-
-
-		model_string += mapping(scale * 2, r=3, bias=1, icnum=24, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
+		model_string += mapping(scale * 2, r=3, bias=1, icnum=64, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
 		# model_string += 'klavgpool|r:2,pad:valid,stride:2,bias:1,{}'.format(convparam) + d+ nl + d
 
 
-		model_string += mapping(scale * 2, r=3, bias=1, icnum=24, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
+		model_string += mapping(scale * 2, r=3, bias=1, icnum=64, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
+		# model_string += 'klavgpool|r:2,pad:valid,stride:2,bias:1,{}'.format(convparam) + d+ nl + d
+
+
+		model_string += mapping(scale * 2, r=3, bias=1, icnum=64, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
 		# model_string += 'klavgpool|r:2,pad:valid,stride:2,bias:1,{}'.format(convparam) + d+ nl + d
 
 
 
-		model_string += mapping(scale * 2, r=3, bias=1, icnum=24, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
+		model_string += mapping(scale * 2, r=3, bias=1, icnum=64, param='log', coef=init_coef, pad='same',stride=2) + d+ nl + d
 		# model_string += 'klavgpool|r:2,pad:valid,stride:2,bias:1,{}'.format(convparam) + d+ nl + d
 
 
-		model_string += mapping(scale * 2, r=3, bias=1, icnum=24, param='log', coef=init_coef, pad='same',stride=1) + d + nl + d
+		model_string += mapping(scale * 2, r=3, bias=1, icnum=64, param='log', coef=init_coef, pad='same',stride=1) + d + nl + d
 
 		model_string += mapping(data_opts.classnum, r=1, bias=1, icnum=1, param='log', coef=init_coef, pad='valid') + d
 
@@ -909,7 +909,7 @@ class VGG_PMAP_CIFAR10_Try(VGG_NOBN_CIFAR100):
 		'''LR SCHED'''
 		data_transforms = [transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])]
 		# data_transforms = []
-		lr_sched = vgg_lr
+		lr_sched = constant_lr(init_lr=1)#vgg_lr
 
 		''' Net Options'''
 		netdict = dict(exact=False, divgreg=None, reg_coef=None, reg_mode=None, alphaPrior=alpha_prior,val_iters=val_iterations)
@@ -926,11 +926,11 @@ class VGG_PMAP_CIFAR10_Try(VGG_NOBN_CIFAR100):
 		opts_optim = OptimOpts(lr=lr,
 							   lr_sched_lambda=lr_sched,
 							   type='SGD',
-							   momentum=0.0,
+							   momentum=0.9,
 							   weight_decay=weight_decay,
 							   dampening=0,
 							   nestrov=False,
-							   loss=NLLLoss(reduce=False)
+							   loss=NLLLoss(reduction='none')
 							   )
 
 		'''Optimizer Options'''
